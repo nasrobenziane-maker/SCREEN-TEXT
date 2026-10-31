@@ -10,21 +10,19 @@
 4. بعد الاستخراج، الصق النص بـ **Ctrl+V**.
 5. من قائمة رمز البرنامج، فعّل **التشغيل مع Windows** إذا أردت بدءه تلقائياً.
 
-يعتمد التعرف على Windows OCR وحزم اللغات المثبتة في Windows. ثبّت لغة OCR المناسبة من إعدادات اللغة في Windows للحصول على أفضل نتيجة. يدعم البرنامج اللغات المتاحة في محرك OCR المثبت، بما فيها العربية عند تثبيت حزمة OCR العربية.
+يستخدم البرنامج محرك Tesseract محلياً، مع نماذج OCR العربية والإنجليزية المضمّنة في ملف EXE. لا يحتاج إلى تثبيت حزمة OCR عربية في Windows، ولا يرسل صورة الشاشة إلى الإنترنت. بيانات النماذج تُفك محلياً إلى `%LOCALAPPDATA%\ScreenText\tessdata` عند أول استخدام.
 
 ## البناء من المصدر
 
-المتطلبات: Windows 10، و.NET 8 SDK.
+المتطلبات: Windows 10 و.NET 8 SDK.
 
 ```powershell
-dotnet restore
-dotnet publish .\ScreenText.csproj -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true
+.\prepare-ocr-data.ps1
+dotnet publish .\ScreenText.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -o .\publish
 ```
 
-الملف الناتج: `bin\Release\net8.0-windows10.0.19041.0\win-x64\publish\ScreenText.exe`.
+الملف الناتج: `publish\ScreenText.exe`. يتطلب Tesseract Visual C++ Redistributable 2022 x64 على جهاز التشغيل.
+
+GitHub Actions ينفذ تنزيل النماذج والبناء ويرفع `ScreenText.exe` مع إشعار تراخيص المكونات ضمن Artifact اسمه `ScreenText-win-x64`.
 
 لا يتطلب البرنامج صلاحيات مسؤول. خيار بدء التشغيل يضيف أو يحذف قيمة `ScreenText` من مفتاح تشغيل المستخدم الحالي في سجل Windows.
-
-## ملاحظة حول OCR
-
-يعتمد إصدار المصدر الحالي على `Windows.Media.Ocr`. توثيق Microsoft يذكر أن هذا الـ API يتطلب هوية تطبيق (MSIX) عند استخدامه من تطبيق سطح مكتب. لذلك حذف حزمة `Microsoft.Windows.SDK.Contracts` يصلح خطأ البناء الظاهر في GitHub Actions، لكنه لا يجعل ملف EXE غير المعبأ صالحاً لتشغيل OCR. يجب توزيع التطبيق كحزمة MSIX أو استبدال محرك OCR قبل اعتماد نسخة EXE مستقلة.

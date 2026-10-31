@@ -1,0 +1,1 @@
+ScreenText includes and locally runs the TesseractOCR .NET wrapper (Apache-2.0) and Tesseract tessdata_fast language models for Arabic and English (Apache-2.0). The models are embedded in the application and extracted to the current user's LocalAppData on first use. See https://github.com/Sicos1977/TesseractOCR and https://github.com/tesseract-ocr/tessdata_fast.

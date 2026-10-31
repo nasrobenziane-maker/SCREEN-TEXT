@@ -10,4 +10,10 @@
     <AssemblyName>ScreenText</AssemblyName>
     <RootNamespace>ScreenText</RootNamespace>
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="TesseractOCR" Version="5.5.2" />
+    <EmbeddedResource Include="tessdata\ara.traineddata" LogicalName="ScreenText.Ocr.ara.traineddata" />
+    <EmbeddedResource Include="tessdata\eng.traineddata" LogicalName="ScreenText.Ocr.eng.traineddata" />
+    <Content Include="THIRD-PARTY-NOTICES.txt" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

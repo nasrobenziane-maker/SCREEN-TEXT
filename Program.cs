@@ -1,9 +1,9 @@
 using System.Drawing.Imaging;
+using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Runtime.InteropServices.WindowsRuntime;
 using Microsoft.Win32;
-using Windows.Graphics.Imaging;
-using Windows.Media.Ocr;
+using TesseractOCR;
+using TesseractOCR.Enums;
 
 namespace ScreenText;
 
@@ -59,21 +59,7 @@ internal sealed class TrayContext : ApplicationContext
             using (var graphics = Graphics.FromImage(bitmap))
                 graphics.CopyFromScreen(selector.Selection.Location, Point.Empty, selector.Selection.Size, CopyPixelOperation.SourceCopy);
 
-            var engine = OcrEngine.TryCreateFromUserProfileLanguages();
-            if (engine is null)
-            {
-                MessageBox.Show("لم يتم العثور على محرك OCR أو لغة OCR مثبتة في Windows. أضف لغة تتضمن إمكانات التعرف على الكتابة.", "ScreenText", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            var rect = new Rectangle(0, 0, bitmap.Width, bitmap.Height);
-            var data = bitmap.LockBits(rect, ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
-            byte[] pixels = new byte[Math.Abs(data.Stride) * data.Height];
-            Marshal.Copy(data.Scan0, pixels, 0, pixels.Length);
-            bitmap.UnlockBits(data);
-            using var softwareBitmap = SoftwareBitmap.CreateCopyFromBuffer(pixels.AsBuffer(), BitmapPixelFormat.Bgra8, bitmap.Width, bitmap.Height, BitmapAlphaMode.Ignore);
-            var result = await engine.RecognizeAsync(softwareBitmap);
-            var text = result.Text.Trim();
+            var text = await Task.Run(() => RecognizeText(bitmap));
             if (text.Length == 0)
             {
                 tray.ShowBalloonTip(2500, "ScreenText", "لم يتم العثور على نص في المنطقة المحددة.", ToolTipIcon.Info);
@@ -86,6 +72,43 @@ internal sealed class TrayContext : ApplicationContext
         {
             MessageBox.Show($"تعذر استخراج النص.\n{ex.Message}", "ScreenText", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
+    }
+
+    private static string RecognizeText(Bitmap bitmap)
+    {
+        var dataRoot = EnsureOcrData();
+        var imagePath = Path.Combine(Path.GetTempPath(), $"ScreenText-{Guid.NewGuid():N}.png");
+        try
+        {
+            bitmap.Save(imagePath, ImageFormat.Png);
+            using var engine = new Engine(dataRoot, "ara+eng", EngineMode.Default);
+            using var image = TesseractOCR.Pix.Image.LoadFromFile(imagePath);
+            using var page = engine.Process(image);
+            return page.Text.Trim();
+        }
+        finally
+        {
+            try { File.Delete(imagePath); } catch { }
+        }
+    }
+
+    private static string EnsureOcrData()
+    {
+        var dataRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ScreenText");
+        var tessdata = Path.Combine(dataRoot, "tessdata");
+        Directory.CreateDirectory(tessdata);
+        var assembly = Assembly.GetExecutingAssembly();
+        foreach (var language in new[] { "ara", "eng" })
+        {
+            var path = Path.Combine(tessdata, $"{language}.traineddata");
+            if (File.Exists(path) && new FileInfo(path).Length > 1024) continue;
+            var resourceName = $"ScreenText.Ocr.{language}.traineddata";
+            using var source = assembly.GetManifestResourceStream(resourceName)
+                ?? throw new FileNotFoundException($"بيانات OCR للغة {language} غير مضمنة في البرنامج.");
+            using var destination = File.Create(path);
+            source.CopyTo(destination);
+        }
+        return dataRoot;
     }
 
     private static bool IsStartupEnabled()

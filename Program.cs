@@ -1,4 +1,5 @@
 using System.Drawing.Imaging;
+
 using System.Reflection;
 using System.Runtime.InteropServices;
 using Microsoft.Win32;
@@ -29,15 +30,16 @@ internal sealed class TrayContext : ApplicationContext
     public TrayContext()
     {
         if (!IsStartupEnabled()) SetStartup(true);
-
         var menu = new ContextMenuStrip();
-        menu.Items.Add("استخراج نص من الشاشة  (Ctrl+E)", null, async (_, _) => await SelectAndRecognizeAsync());
+        menu.Items.Add("استخراج نص من الشاشة (Ctrl+E)", null, async (_, _) => await SelectAndRecognizeAsync());
         var startup = new ToolStripMenuItem("التشغيل مع Windows") { CheckOnClick = true, Checked = IsStartupEnabled() };
         startup.CheckedChanged += (_, _) => SetStartup(startup.Checked);
         menu.Items.Add(startup);
-        menu.Items.Add("حول البرنامج", null, (_, _) => MessageBox.Show("ScreenText\nحدد أي جزء من الشاشة وسيتم نسخ النص إلى الحافظة.\n\nالاختصار: Ctrl+E", "حول البرنامج"));
-        menu.Items.Add("خروج", null, (_, _) => ExitThread());
+        menu.Items.Add("حول البرنامج", null, (_, _) => MessageBox.Show("ScreenText
+حدد أي جزء من الشاشة وسيتم نسخ النص إلى الحافظة.
 
+الاختصار: Ctrl+E", "حول البرنامج"));
+        menu.Items.Add("خروج", null, (_, _) => ExitThread());
         tray = new NotifyIcon { Icon = SystemIcons.Application, Text = "ScreenText — Ctrl+E", ContextMenuStrip = menu, Visible = true };
         tray.DoubleClick += async (_, _) => await SelectAndRecognizeAsync();
         hotkeyWindow = new HotkeyWindow(OnHotkey);
@@ -51,14 +53,12 @@ internal sealed class TrayContext : ApplicationContext
     {
         using var selector = new RegionSelector();
         if (selector.ShowDialog() != DialogResult.OK || selector.Selection.Width < 3 || selector.Selection.Height < 3) return;
-
         try
         {
             await Task.Delay(150);
             using var bitmap = new Bitmap(selector.Selection.Width, selector.Selection.Height, PixelFormat.Format32bppArgb);
             using (var graphics = Graphics.FromImage(bitmap))
                 graphics.CopyFromScreen(selector.Selection.Location, Point.Empty, selector.Selection.Size, CopyPixelOperation.SourceCopy);
-
             var text = await Task.Run(() => RecognizeText(bitmap));
             if (text.Length == 0)
             {
@@ -70,7 +70,8 @@ internal sealed class TrayContext : ApplicationContext
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"تعذر استخراج النص.\n{ex.Message}", "ScreenText", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show($"تعذر استخراج النص.
+{ex.Message}", "ScreenText", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -80,7 +81,7 @@ internal sealed class TrayContext : ApplicationContext
         var imagePath = Path.Combine(Path.GetTempPath(), $"ScreenText-{Guid.NewGuid():N}.png");
         try
         {
-            bitmap.Save(imagePath, ImageFormat.Png);
+            bitmap.Save(imagePath, System.Drawing.Imaging.ImageFormat.Png);
             using var engine = new Engine(dataRoot, "ara+eng", EngineMode.Default);
             using var image = TesseractOCR.Pix.Image.LoadFromFile(imagePath);
             using var page = engine.Process(image);
@@ -113,15 +114,15 @@ internal sealed class TrayContext : ApplicationContext
 
     private static bool IsStartupEnabled()
     {
-        using var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run");
+        using var key = Registry.CurrentUser.OpenSubKey(@"SoftwareMicrosoftWindowsCurrentVersionRun");
         return key?.GetValue("ScreenText") is string;
     }
 
     private static void SetStartup(bool enabled)
     {
-        using var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run", writable: true);
+        using var key = Registry.CurrentUser.OpenSubKey(@"SoftwareMicrosoftWindowsCurrentVersionRun", writable: true);
         if (key is null) return;
-        if (enabled) key.SetValue("ScreenText", $"\"{Application.ExecutablePath}\"");
+        if (enabled) key.SetValue("ScreenText", $""{Application.ExecutablePath}"");
         else key.DeleteValue("ScreenText", throwOnMissingValue: false);
     }
 
@@ -212,7 +213,6 @@ internal sealed class RegionSelector : Form
         e.Graphics.DrawImageUnscaled(desktop, 0, 0);
         using (var dim = new SolidBrush(Color.FromArgb(75, 0, 0, 0)))
             e.Graphics.FillRectangle(dim, ClientRectangle);
-
         if (dragging)
         {
             var current = Rectangle.FromLTRB(Math.Min(start.X, end.X), Math.Min(start.Y, end.Y), Math.Max(start.X, end.X), Math.Max(start.Y, end.Y));
@@ -226,7 +226,6 @@ internal sealed class RegionSelector : Form
                 e.Graphics.DrawRectangle(border, current);
             }
         }
-
         const string hint = "اسحب لتحديد المنطقة — Esc للإلغاء";
         var hintRect = new Rectangle(18, 14, 440, 44);
         using (var panel = new SolidBrush(Color.FromArgb(200, 20, 25, 32)))

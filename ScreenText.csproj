@@ -10,8 +10,4 @@
     <AssemblyName>ScreenText</AssemblyName>
     <RootNamespace>ScreenText</RootNamespace>
   </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Windows.SDK.Contracts" Version="10.0.19041.1" />
-  </ItemGroup>
 </Project>
-

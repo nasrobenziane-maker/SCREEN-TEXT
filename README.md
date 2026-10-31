@@ -24,3 +24,7 @@ dotnet publish .\ScreenText.csproj -c Release -r win-x64 --self-contained true /
 الملف الناتج: `bin\Release\net8.0-windows10.0.19041.0\win-x64\publish\ScreenText.exe`.
 
 لا يتطلب البرنامج صلاحيات مسؤول. خيار بدء التشغيل يضيف أو يحذف قيمة `ScreenText` من مفتاح تشغيل المستخدم الحالي في سجل Windows.
+
+## ملاحظة حول OCR
+
+يعتمد إصدار المصدر الحالي على `Windows.Media.Ocr`. توثيق Microsoft يذكر أن هذا الـ API يتطلب هوية تطبيق (MSIX) عند استخدامه من تطبيق سطح مكتب. لذلك حذف حزمة `Microsoft.Windows.SDK.Contracts` يصلح خطأ البناء الظاهر في GitHub Actions، لكنه لا يجعل ملف EXE غير المعبأ صالحاً لتشغيل OCR. يجب توزيع التطبيق كحزمة MSIX أو استبدال محرك OCR قبل اعتماد نسخة EXE مستقلة.

@@ -136,6 +136,7 @@ internal sealed class RegionSelector : Form
     private Point start;
     private Point end;
     private bool dragging;
+    private readonly Bitmap desktop;
     public Rectangle Selection { get; private set; }
 
     public RegionSelector()
@@ -148,8 +149,11 @@ internal sealed class RegionSelector : Form
         DoubleBuffered = true;
         Cursor = Cursors.Cross;
         BackColor = Color.Black;
-        Opacity = 0.28;
+        Opacity = 1.0;
         KeyPreview = true;
+        desktop = new Bitmap(Bounds.Width, Bounds.Height, PixelFormat.Format32bppArgb);
+        using (var graphics = Graphics.FromImage(desktop))
+            graphics.CopyFromScreen(Bounds.Location, Point.Empty, Bounds.Size, CopyPixelOperation.SourceCopy);
         KeyDown += (_, e) => { if (e.KeyCode == Keys.Escape) { DialogResult = DialogResult.Cancel; Close(); } };
     }
 
@@ -161,12 +165,14 @@ internal sealed class RegionSelector : Form
         end = start;
         Invalidate();
     }
+
     protected override void OnMouseMove(MouseEventArgs e)
     {
         if (!dragging) return;
         end = PointToScreen(e.Location);
         Invalidate();
     }
+
     protected override void OnMouseUp(MouseEventArgs e)
     {
         if (!dragging) return;
@@ -176,19 +182,39 @@ internal sealed class RegionSelector : Form
         DialogResult = DialogResult.OK;
         Close();
     }
+
     protected override void OnPaint(PaintEventArgs e)
     {
         base.OnPaint(e);
-        var current = dragging ? Rectangle.FromLTRB(Math.Min(start.X, end.X), Math.Min(start.Y, end.Y), Math.Max(start.X, end.X), Math.Max(start.Y, end.Y)) : Rectangle.Empty;
-        if (!current.IsEmpty)
+        e.Graphics.DrawImageUnscaled(desktop, 0, 0);
+        using (var dim = new SolidBrush(Color.FromArgb(75, 0, 0, 0)))
+            e.Graphics.FillRectangle(dim, ClientRectangle);
+
+        if (dragging)
         {
+            var current = Rectangle.FromLTRB(Math.Min(start.X, end.X), Math.Min(start.Y, end.Y), Math.Max(start.X, end.X), Math.Max(start.Y, end.Y));
             current.Offset(-Bounds.Left, -Bounds.Top);
-            using var brush = new SolidBrush(Color.FromArgb(70, Color.DeepSkyBlue));
-            using var pen = new Pen(Color.DeepSkyBlue, 2);
-            e.Graphics.FillRectangle(brush, current);
-            e.Graphics.DrawRectangle(pen, current);
+            if (current.Width > 0 && current.Height > 0)
+            {
+                e.Graphics.DrawImage(desktop, current, current, GraphicsUnit.Pixel);
+                using var border = new Pen(Color.DeepSkyBlue, 3);
+                using var fill = new SolidBrush(Color.FromArgb(35, Color.DeepSkyBlue));
+                e.Graphics.FillRectangle(fill, current);
+                e.Graphics.DrawRectangle(border, current);
+            }
         }
-        TextRenderer.DrawText(e.Graphics, "اسحب لتحديد المنطقة — Esc للإلغاء", Font, new Point(24, 20), Color.White, Color.Transparent);
+
+        const string hint = "اسحب لتحديد المنطقة — Esc للإلغاء";
+        var hintRect = new Rectangle(18, 14, 440, 44);
+        using (var panel = new SolidBrush(Color.FromArgb(200, 20, 25, 32)))
+            e.Graphics.FillRectangle(panel, hintRect);
+        TextRenderer.DrawText(e.Graphics, hint, new Font("Segoe UI", 14, FontStyle.Bold), hintRect, Color.White,
+            TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.RightToLeft);
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing) desktop.Dispose();
+        base.Dispose(disposing);
     }
 }
-
